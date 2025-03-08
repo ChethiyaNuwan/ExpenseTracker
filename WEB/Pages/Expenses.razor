@@ -1,0 +1,164 @@
+@page "/expenses"
+@using Web.Data
+@inject ExpenseService ExpenseService
+
+<PageTitle>Expenses</PageTitle>
+
+<div class="container">
+    <h1>Expense Tracker</h1>
+
+    @if (showForm)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">@(editingExpense?.Id > 0 ? "Edit" : "Add") Expense</h5>
+                <EditForm Model="@currentExpense" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <InputText class="form-control" @bind-Value="currentExpense.Title" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <InputNumber class="form-control" @bind-Value="currentExpense.Amount" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <InputText class="form-control" @bind-Value="currentExpense.Category" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <InputDate class="form-control" @bind-Value="currentExpense.Date" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <InputTextArea class="form-control" @bind-Value="currentExpense.Description" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                </EditForm>
+            </div>
+        </div>
+    }
+    else
+    {
+        <button class="btn btn-primary mb-4" @onclick="() => ShowAddForm()">Add New Expense</button>
+    }
+
+    @if (expenses == null)
+    {
+        <p>Loading...</p>
+    }
+    else if (!expenses.Any())
+    {
+        <p>No expenses found. Add your first expense!</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var expense in expenses)
+                    {
+                        <tr>
+                            <td>@expense.Date.ToShortDateString()</td>
+                            <td>@expense.Title</td>
+                            <td>@expense.Category</td>
+                            <td>$@expense.Amount.ToString("F2")</td>
+                            <td>
+                                <button class="btn btn-sm btn-info me-2" @onclick="() => EditExpense(expense)">Edit</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteExpense(expense.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private IEnumerable<Expense>? expenses;
+    private Expense currentExpense = new() { Date = DateTime.Today };
+    private Expense? editingExpense;
+    private bool showForm;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpenses();
+    }
+
+    private async Task LoadExpenses()
+    {
+        expenses = await ExpenseService.GetExpensesAsync();
+    }
+
+    private void ShowAddForm()
+    {
+        currentExpense = new Expense { Date = DateTime.Today };
+        editingExpense = null;
+        showForm = true;
+    }
+
+    private void EditExpense(Expense expense)
+    {
+        editingExpense = expense;
+        currentExpense = new Expense
+        {
+            Id = expense.Id,
+            Title = expense.Title,
+            Amount = expense.Amount,
+            Category = expense.Category,
+            Date = expense.Date,
+            Description = expense.Description
+        };
+        showForm = true;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (editingExpense != null)
+        {
+            await ExpenseService.UpdateExpenseAsync(currentExpense);
+        }
+        else
+        {
+            await ExpenseService.CreateExpenseAsync(currentExpense);
+        }
+
+        showForm = false;
+        await LoadExpenses();
+    }
+
+    private void CancelEdit()
+    {
+        showForm = false;
+        editingExpense = null;
+        currentExpense = new() { Date = DateTime.Today };
+    }
+
+    private async Task DeleteExpense(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this expense?"))
+        {
+            await ExpenseService.DeleteExpenseAsync(id);
+            await LoadExpenses();
+        }
+    }
+}
