@@ -1,6 +1,7 @@
 @page "/expenses"
 @using Web.Data
 @inject ExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Expenses</PageTitle>
 
@@ -155,7 +156,7 @@
 
     private async Task DeleteExpense(int id)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this expense?"))
+        if (await JSRuntime.InvokeAsync<bool>("confirm", new[] { "Are you sure you want to delete this expense?" }))
         {
             await ExpenseService.DeleteExpenseAsync(id);
             await LoadExpenses();
