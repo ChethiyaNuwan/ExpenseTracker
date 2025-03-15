@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Native": {
+      "commandName": "Project",
+      "commandLineArgs": "",
+      "dotnetRunMessages": true
+    }
+  }
+}
